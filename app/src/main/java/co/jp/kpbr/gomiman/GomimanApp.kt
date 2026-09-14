@@ -7,9 +7,10 @@ import co.jp.kpbr.gomiman.data.local.PreferencesManager
 import co.jp.kpbr.gomiman.data.model.UserInfoModel
 import co.jp.kpbr.gomiman.data.network.AppCheckManager
 import co.jp.kpbr.gomiman.data.repository.CalendarRepository
-import co.jp.kpbr.gomiman.data.repository.CloudRunSyncRepository
+import co.jp.kpbr.gomiman.data.repository.FirestoreSyncRepository
 import co.jp.kpbr.gomiman.data.repository.GarbageRepository
 import co.jp.kpbr.gomiman.data.repository.SyncRepository
+import co.jp.kpbr.gomiman.utils.UserInfoCollector
 import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +47,7 @@ class GomimanApp : Application() {
         garbageRepository = GarbageRepository(databaseHelper)
         calendarRepository = CalendarRepository(this)
         preferencesManager = PreferencesManager(this)
-        syncRepository = CloudRunSyncRepository(deviceIdProvider = deviceIdProvider)
+        syncRepository = FirestoreSyncRepository(deviceIdProvider = deviceIdProvider)
 
         try {
             MobileAds.initialize(this) {}
@@ -57,17 +58,14 @@ class GomimanApp : Application() {
         applicationScope.launch {
             garbageRepository.loadGarbageCollections()
 
-            val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-            val userInfo = UserInfoModel(
-                deviceUniqueId = deviceId,
-                brand = android.os.Build.BRAND,
-                model = android.os.Build.MODEL,
-                device = android.os.Build.DEVICE,
-                systemVersion = "${android.os.Build.VERSION.SDK_INT}"
-            )
-//            syncRepository.syncBaseInfo(userInfo)
-
-            syncRepository.testPing()
+            // Collect device and system info, then sync to Firestore on app open
+            val userInfo = UserInfoCollector.collect(this@GomimanApp)
+            val syncResult = syncRepository.syncBaseInfo(userInfo)
+            if (syncResult.isSuccess) {
+                android.util.Log.d("GomimanApp", "User info successfully synced to Firestore on launch")
+            } else {
+                android.util.Log.w("GomimanApp", "Failed to sync user info on launch", syncResult.exceptionOrNull())
+            }
         }
     }
 
