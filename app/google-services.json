@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "272780938054",
+    "project_id": "gomiman-af0f8",
+    "storage_bucket": "gomiman-af0f8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272780938054:android:fd88a589439c66a2b17347",
+        "android_client_info": {
+          "package_name": "co.jp.kpbr.gomiman"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "272780938054-c118ac3vput9l5v2ef4l9fq5j04lh4f6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLvYS9SFJNuU05ac7lUo4WDaqDsciOcWY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "272780938054-c118ac3vput9l5v2ef4l9fq5j04lh4f6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "272780938054-3819glt3libbtbri3fdgdn6orv151jma.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.bms.gomiman"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
