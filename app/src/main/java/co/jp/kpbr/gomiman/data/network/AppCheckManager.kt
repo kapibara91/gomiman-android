@@ -3,6 +3,8 @@ package co.jp.kpbr.gomiman.data.network
 import android.content.Context
 import android.util.Log
 import co.jp.kpbr.gomiman.BuildConfig
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -12,12 +14,11 @@ import kotlinx.coroutines.tasks.await
 /**
  * Manages Firebase App Check initialization and token retrieval.
  *
- * In Debug builds, DebugAppCheckProviderFactory is used.
- * When running the debug APK, Firebase prints a debug secret to Logcat:
- *   "Enter this debug secret into the allow list in the Firebase Console for your project: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+ * In Debug builds or when Google Play Services is unavailable,
+ * DebugAppCheckProviderFactory is used as fallback.
  *
- * In Release builds, PlayIntegrityAppCheckProviderFactory is used, verifying
- * device authenticity via Google Play Integrity API with the registered release signing key.
+ * In Release builds, PlayIntegrityAppCheckProviderFactory is used when
+ * Google Play Services is available on the device.
  */
 object AppCheckManager {
     private const val TAG = "AppCheckManager"
@@ -37,20 +38,36 @@ object AppCheckManager {
 
                 val firebaseAppCheck = FirebaseAppCheck.getInstance()
 
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Initializing Firebase App Check with DebugAppCheckProviderFactory")
+                val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
+                val isGmsAvailable = (availability == ConnectionResult.SUCCESS)
+
+                if (BuildConfig.DEBUG || !isGmsAvailable) {
+                    Log.d(
+                        TAG,
+                        "Initializing Firebase App Check with DebugAppCheckProviderFactory " +
+                                "(DEBUG=${BuildConfig.DEBUG}, gmsAvailable=$isGmsAvailable, gmsCode=$availability)"
+                    )
                     firebaseAppCheck.installAppCheckProviderFactory(
                         DebugAppCheckProviderFactory.getInstance()
                     )
                 } else {
                     Log.d(TAG, "Initializing Firebase App Check with PlayIntegrityAppCheckProviderFactory")
-                    firebaseAppCheck.installAppCheckProviderFactory(
-                        PlayIntegrityAppCheckProviderFactory.getInstance()
-                    )
+                    try {
+                        firebaseAppCheck.installAppCheckProviderFactory(
+                            PlayIntegrityAppCheckProviderFactory.getInstance()
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to install PlayIntegrityAppCheckProviderFactory, falling back to Debug provider", e)
+                        firebaseAppCheck.installAppCheckProviderFactory(
+                            DebugAppCheckProviderFactory.getInstance()
+                        )
+                    }
                 }
 
                 isInitialized = true
-                Log.i(TAG, "Firebase App Check initialized successfully (DEBUG=${BuildConfig.DEBUG})")
+                Log.i(TAG, "Firebase App Check initialized successfully")
+            } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException while initializing Firebase App Check (GMS broker unavailable)", e)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize Firebase App Check", e)
             }
@@ -70,6 +87,9 @@ object AppCheckManager {
             val token = result.token
             Log.d(TAG, "Obtained App Check token: length=${token.length}, expireTimeMillis=${result.expireTimeMillis}")
             token
+        } catch (e: SecurityException) {
+            Log.w(TAG, "SecurityException obtaining App Check token: ${e.message}")
+            null
         } catch (e: Exception) {
             Log.w(TAG, "Failed to obtain App Check token: ${e.message}")
             null

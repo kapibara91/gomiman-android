@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.play.services.ads)
+    implementation(libs.google.play.services.base)
 
     // Firebase App Check & Firestore
     implementation(platform(libs.firebase.bom))

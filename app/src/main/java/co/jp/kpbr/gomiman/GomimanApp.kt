@@ -2,9 +2,9 @@ package co.jp.kpbr.gomiman
 
 import android.app.Application
 import android.provider.Settings
+import android.util.Log
 import co.jp.kpbr.gomiman.data.local.GarbageDatabaseHelper
 import co.jp.kpbr.gomiman.data.local.PreferencesManager
-import co.jp.kpbr.gomiman.data.model.UserInfoModel
 import co.jp.kpbr.gomiman.data.network.AppCheckManager
 import co.jp.kpbr.gomiman.data.repository.CalendarRepository
 import co.jp.kpbr.gomiman.data.repository.FirestoreSyncRepository
@@ -12,6 +12,8 @@ import co.jp.kpbr.gomiman.data.repository.GarbageRepository
 import co.jp.kpbr.gomiman.data.repository.SyncRepository
 import co.jp.kpbr.gomiman.utils.UserInfoCollector
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,10 +51,17 @@ class GomimanApp : Application() {
         preferencesManager = PreferencesManager(this)
         syncRepository = FirestoreSyncRepository(deviceIdProvider = deviceIdProvider)
 
-        try {
-            MobileAds.initialize(this) {}
-        } catch (e: Exception) {
-            // Ads initialization safe fallback
+        val gmsAvailability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
+        if (gmsAvailability == ConnectionResult.SUCCESS) {
+            try {
+                MobileAds.initialize(this) {}
+            } catch (e: SecurityException) {
+                Log.w("GomimanApp", "SecurityException initializing MobileAds (GMS broker unavailable)", e)
+            } catch (e: Exception) {
+                Log.w("GomimanApp", "Failed to initialize MobileAds", e)
+            }
+        } else {
+            Log.w("GomimanApp", "Google Play Services unavailable (code=$gmsAvailability). Skipping MobileAds init.")
         }
 
         applicationScope.launch {
@@ -62,9 +71,9 @@ class GomimanApp : Application() {
             val userInfo = UserInfoCollector.collect(this@GomimanApp)
             val syncResult = syncRepository.syncBaseInfo(userInfo)
             if (syncResult.isSuccess) {
-                android.util.Log.d("GomimanApp", "User info successfully synced to Firestore on launch")
+                Log.d("GomimanApp", "User info successfully synced to Firestore on launch")
             } else {
-                android.util.Log.w("GomimanApp", "Failed to sync user info on launch", syncResult.exceptionOrNull())
+                Log.w("GomimanApp", "Failed to sync user info on launch", syncResult.exceptionOrNull())
             }
         }
     }

@@ -39,6 +39,9 @@ class FirestoreSyncRepository(
 
             Log.d(TAG, "Successfully synced user info to Firestore for docId: $docId")
             Result.success(Unit)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException syncing user info to Firestore (GMS broker unavailable)", e)
+            Result.failure(e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sync user info to Firestore", e)
             Result.failure(e)
@@ -71,6 +74,9 @@ class FirestoreSyncRepository(
                 .await()
             Log.d(TAG, "Feedback submitted to Firestore successfully")
             Result.success(Unit)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException submitting feedback to Firestore (GMS broker unavailable)", e)
+            Result.failure(e)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to submit feedback to Firestore", e)
             Result.failure(e)
@@ -82,6 +88,9 @@ class FirestoreSyncRepository(
             val appName = firestore.app.name
             Log.d(TAG, "Firestore testPing ok. FirebaseApp: $appName")
             Result.success("Firestore connected: $appName")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException during Firestore testPing (GMS broker unavailable)", e)
+            Result.failure(e)
         } catch (e: Exception) {
             Log.e(TAG, "Firestore testPing failed", e)
             Result.failure(e)
