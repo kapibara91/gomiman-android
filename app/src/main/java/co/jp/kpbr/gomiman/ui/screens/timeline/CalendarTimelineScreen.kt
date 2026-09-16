@@ -90,7 +90,13 @@ fun CalendarTimelineScreen(
         )
 
         if (garbageModels.isEmpty()) {
-            EmptyScheduleView(onNavigateToAdd = onNavigateToAdd)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                EmptyScheduleView(onNavigateToAdd = onNavigateToAdd)
+            }
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -107,6 +113,12 @@ fun CalendarTimelineScreen(
                 }
             }
         }
+
+        // Bottom Banner Ad
+        co.jp.kpbr.gomiman.ui.components.BannerAdView(
+            adUnitId = co.jp.kpbr.gomiman.ui.components.AdConstants.getTimelineBannerUnitId(),
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+        )
     }
 }
 

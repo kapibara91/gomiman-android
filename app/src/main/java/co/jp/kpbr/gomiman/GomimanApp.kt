@@ -17,11 +17,24 @@ import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.launch
 
 class GomimanApp : Application() {
 
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    val deviceIdProvider: () -> String? = {
+        try {
+            Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     lateinit var databaseHelper: GarbageDatabaseHelper
         private set
@@ -41,9 +54,8 @@ class GomimanApp : Application() {
         // Initialize Firebase App Check
         AppCheckManager.initialize(this)
 
-        val deviceIdProvider = {
-            Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        }
+        // Initialize Notification Channel (Android 8.0+ / API 26+)
+        createNotificationChannel()
 
         preferencesManager = PreferencesManager(this)
         databaseHelper = GarbageDatabaseHelper(this)
@@ -75,8 +87,18 @@ class GomimanApp : Application() {
                 }
             }
 
-            // Collect device and system info, then sync to Firestore on app open
-            val userInfo = UserInfoCollector.collect(this@GomimanApp)
+            // Retrieve FCM token if available
+            val fcmToken = try {
+                val token = FirebaseMessaging.getInstance().token.await()
+                Log.d("GomimanApp", "Obtained FCM token: $token")
+                token
+            } catch (e: Exception) {
+                Log.w("GomimanApp", "Failed to obtain FCM token on launch", e)
+                null
+            }
+
+            // Collect device and system info with fcmToken, then sync to Firestore on app open
+            val userInfo = UserInfoCollector.collect(this@GomimanApp, fcmToken = fcmToken)
             val syncResult = syncRepository.syncBaseInfo(userInfo)
             if (syncResult.isSuccess) {
                 Log.d("GomimanApp", "User info successfully synced to Firestore on launch")
@@ -86,8 +108,28 @@ class GomimanApp : Application() {
         }
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID_GARBAGE_REMINDER,
+                CHANNEL_NAME_GARBAGE_REMINDER,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "ごみの収集日や前日のリマインド通知"
+                enableLights(true)
+                enableVibration(true)
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
+            Log.d("GomimanApp", "Notification channel '$CHANNEL_ID_GARBAGE_REMINDER' created")
+        }
+    }
+
     companion object {
         lateinit var instance: GomimanApp
             private set
+
+        const val CHANNEL_ID_GARBAGE_REMINDER = "gomiman_garbage_reminder"
+        const val CHANNEL_NAME_GARBAGE_REMINDER = "ゴミ収集日のお知らせ"
     }
 }

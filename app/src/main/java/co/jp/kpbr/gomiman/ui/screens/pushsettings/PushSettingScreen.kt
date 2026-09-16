@@ -1,7 +1,13 @@
 package co.jp.kpbr.gomiman.ui.screens.pushsettings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -20,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import co.jp.kpbr.gomiman.data.local.PreferencesManager
 import co.jp.kpbr.gomiman.data.model.PushSettingModel
 import co.jp.kpbr.gomiman.data.repository.SyncRepository
@@ -40,6 +47,29 @@ fun PushSettingScreen(
     // Handle system back gesture/button without saving
     BackHandler {
         onNavigateBack()
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("PushSettingScreen", "POST_NOTIFICATIONS permission granted by user")
+        } else {
+            Log.d("PushSettingScreen", "POST_NOTIFICATIONS permission denied by user")
+        }
+    }
+
+    // Request notification permission when entering screen on Android 13+ (API 33+)
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permissionCheck = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
     val initialSetting = remember { preferencesManager.getPushSetting() }

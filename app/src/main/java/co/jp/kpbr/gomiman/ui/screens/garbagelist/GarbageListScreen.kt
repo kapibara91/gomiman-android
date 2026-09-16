@@ -100,26 +100,38 @@ fun GarbageListScreen(
         },
         containerColor = Color.White
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (garbageModels.isEmpty()) {
-                EmptyGarbageView()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    items(garbageModels, key = { it.id ?: 0L }) { model ->
-                        GarbageScheduleCard(
-                            model = model,
-                            onDelete = { scheduleToDelete = model }
-                        )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (garbageModels.isEmpty()) {
+                    EmptyGarbageView()
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(garbageModels, key = { it.id ?: 0L }) { model ->
+                            GarbageScheduleCard(
+                                model = model,
+                                onDelete = { scheduleToDelete = model }
+                            )
+                        }
                     }
                 }
             }
+
+            // Bottom Banner Ad
+            co.jp.kpbr.gomiman.ui.components.BannerAdView(
+                adUnitId = co.jp.kpbr.gomiman.ui.components.AdConstants.getCollectionBannerUnitId(),
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+            )
         }
     }
 }

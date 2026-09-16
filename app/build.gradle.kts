@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
 
     // Networking
     implementation(libs.okhttp)
