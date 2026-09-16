@@ -13,7 +13,7 @@ import kotlinx.coroutines.delay
 interface SyncRepository {
     suspend fun syncBaseInfo(userInfo: UserInfoModel): Result<Unit>
     suspend fun syncPushSetting(pushSetting: PushSettingModel): Result<Unit>
-    suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>): Result<Unit>
+    suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long = 0L): Result<Unit>
     suspend fun submitFeedback(message: String): Result<Unit>
     suspend fun testPing(): Result<String>
 }
@@ -41,8 +41,8 @@ class CloudRunSyncRepositoryStub : SyncRepository {
         return Result.success(Unit)
     }
 
-    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>): Result<Unit> {
-        Log.d(TAG, "syncGarbageSetting stub called with ${collections.size} schedules")
+    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> {
+        Log.d(TAG, "syncGarbageSetting stub called with ${collections.size} schedules, version: $version")
         delay(100)
         return Result.success(Unit)
     }

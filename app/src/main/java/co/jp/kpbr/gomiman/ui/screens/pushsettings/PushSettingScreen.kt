@@ -1,6 +1,7 @@
 package co.jp.kpbr.gomiman.ui.screens.pushsettings
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -35,6 +36,11 @@ fun PushSettingScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Handle system back gesture/button without saving
+    BackHandler {
+        onNavigateBack()
+    }
 
     val initialSetting = remember { preferencesManager.getPushSetting() }
     var collectionDayBefore by remember { mutableStateOf(initialSetting.collectionDayBefore) }
@@ -72,7 +78,7 @@ fun PushSettingScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = { saveAndExit() }) {
+                    TextButton(onClick = { onNavigateBack() }) {
                         Text(text = "戻る", color = DefaultThemeColor, fontSize = 15.sp)
                     }
                 },

@@ -162,7 +162,7 @@ fun MainScreen(
                         onDeleteSchedule = { id ->
                             scope.launch {
                                 garbageRepository.deleteGarbageCollection(id)
-                                syncRepository.syncGarbageSetting(garbageRepository.garbageModels.value)
+                                garbageRepository.syncWithServer(syncRepository)
                             }
                         }
                     )
@@ -174,7 +174,7 @@ fun MainScreen(
                         onResetGarbageCollections = {
                             scope.launch {
                                 garbageRepository.deleteAllGarbageCollections()
-                                syncRepository.syncGarbageSetting(emptyList())
+                                garbageRepository.syncWithServer(syncRepository)
                             }
                         },
                         onNavigateToPushSettings = {
@@ -195,7 +195,7 @@ fun MainScreen(
                         onSaveSuccess = { newModel ->
                             scope.launch {
                                 garbageRepository.insertGarbageCollection(newModel)
-                                syncRepository.syncGarbageSetting(garbageRepository.garbageModels.value)
+                                garbageRepository.syncWithServer(syncRepository)
                                 if (preferencesManager.isFirstTimeAddedGarbage()) {
                                     preferencesManager.markFirstTimeAddedGarbage()
                                     showFirstTimeNotificationDialog = true

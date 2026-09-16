@@ -45,10 +45,10 @@ class GomimanApp : Application() {
             Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         }
 
-        databaseHelper = GarbageDatabaseHelper(this)
-        garbageRepository = GarbageRepository(databaseHelper)
-        calendarRepository = CalendarRepository(this)
         preferencesManager = PreferencesManager(this)
+        databaseHelper = GarbageDatabaseHelper(this)
+        garbageRepository = GarbageRepository(preferencesManager = preferencesManager, dbHelper = databaseHelper)
+        calendarRepository = CalendarRepository(this)
         syncRepository = FirestoreSyncRepository(deviceIdProvider = deviceIdProvider)
 
         val gmsAvailability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
@@ -66,6 +66,14 @@ class GomimanApp : Application() {
 
         applicationScope.launch {
             garbageRepository.loadGarbageCollections()
+
+            // If local schedules have not synced to server yet, attempt sync on startup
+            if (!garbageRepository.isSynced.value && garbageRepository.garbageModels.value.isNotEmpty()) {
+                val syncRes = garbageRepository.syncWithServer(syncRepository)
+                if (syncRes.isSuccess) {
+                    Log.d("GomimanApp", "Pending garbage schedules synced to server on launch")
+                }
+            }
 
             // Collect device and system info, then sync to Firestore on app open
             val userInfo = UserInfoCollector.collect(this@GomimanApp)

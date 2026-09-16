@@ -54,10 +54,33 @@ class FirestoreSyncRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>): Result<Unit> {
-        // Reserved for future Firestore sync when user specifies schema
-        Log.d(TAG, "syncGarbageSetting called with ${collections.size} items (waiting for schema definition)")
-        return Result.success(Unit)
+    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> {
+        return try {
+            val docId = deviceIdProvider()?.takeIf { it.isNotBlank() }
+                ?: return Result.failure(IllegalArgumentException("Device ID cannot be empty when syncing garbage setting to Firestore."))
+
+            Log.d(TAG, "Syncing ${collections.size} garbage schedules to Firestore for docId: $docId with version: $version")
+            val data = mapOf(
+                "userGarbageInfo" to collections.map { it.toMap() },
+                "version" to version,
+                "garbageVersion" to version,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+
+            firestore.collection(COLLECTION_USERS)
+                .document(docId)
+                .set(data, SetOptions.merge())
+                .await()
+
+            Log.d(TAG, "Successfully synced garbage setting to Firestore with version $version")
+            Result.success(Unit)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException syncing garbage setting to Firestore (GMS broker unavailable)", e)
+            Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync garbage setting to Firestore", e)
+            Result.failure(e)
+        }
     }
 
     override suspend fun submitFeedback(message: String): Result<Unit> {

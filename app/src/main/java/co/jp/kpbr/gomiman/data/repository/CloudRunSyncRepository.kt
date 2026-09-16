@@ -72,11 +72,13 @@ class CloudRunSyncRepository(
         }
     }
 
-    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val bodyMap = mapOf(
                 "identifierForVendor" to deviceIdProvider(),
-                "userGarbageInfo" to collections.map { it.toMap() }
+                "userGarbageInfo" to collections.map { it.toMap() },
+                "version" to version,
+                "scheduleVersion" to version
             )
 
             postJson(CloudRunConfig.PATH_SYNC_GARBAGE_SETTING, bodyMap)

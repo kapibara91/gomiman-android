@@ -9,7 +9,9 @@ data class GarbageCollectionModel(
     /** Garbage types: 1 to 7 */
     var garbageTypes: MutableList<Int> = mutableListOf(),
     /** Days of week: 1 (Mon) to 7 (Sun) */
-    var days: MutableList<Int> = mutableListOf()
+    var days: MutableList<Int> = mutableListOf(),
+    /** Version timestamp to prevent backend from sending outdated push notifications */
+    var version: Long = 0L
 ) {
     companion object {
         const val WEEK_STATUS_EVERY_WEEK = 1
@@ -17,11 +19,14 @@ data class GarbageCollectionModel(
     }
 
     fun toMap(): Map<String, Any> {
-        return mapOf(
+        val map = mutableMapOf<String, Any>(
             "weekStatus" to weekStatus,
             "weeks" to weeks.toList(),
             "garbageTypes" to garbageTypes.toList(),
-            "days" to days.toList()
+            "days" to days.toList(),
+            "version" to version
         )
+        id?.let { map["id"] = it }
+        return map
     }
 }
