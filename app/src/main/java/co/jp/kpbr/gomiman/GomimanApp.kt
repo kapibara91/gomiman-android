@@ -61,7 +61,10 @@ class GomimanApp : Application() {
         databaseHelper = GarbageDatabaseHelper(this)
         garbageRepository = GarbageRepository(preferencesManager = preferencesManager, dbHelper = databaseHelper)
         calendarRepository = CalendarRepository(this)
-        syncRepository = FirestoreSyncRepository(deviceIdProvider = deviceIdProvider)
+        syncRepository = FirestoreSyncRepository(
+            deviceIdProvider = deviceIdProvider,
+            pushSettingProvider = { preferencesManager.getPushSetting() }
+        )
 
         val gmsAvailability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
         if (gmsAvailability == ConnectionResult.SUCCESS) {

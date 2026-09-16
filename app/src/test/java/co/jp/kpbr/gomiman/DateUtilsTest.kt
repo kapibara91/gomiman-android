@@ -42,7 +42,7 @@ class DateUtilsTest {
             garbageTypes = mutableListOf(1) // 可燃
         )
         val formattedEveryWeek = DateUtils.formatScheduleSummary(everyWeekModel)
-        assertEquals("毎週　月、水曜日", formattedEveryWeek)
+        assertEquals("毎週 月・水曜日", formattedEveryWeek)
 
         val biweeklyModel = GarbageCollectionModel(
             weekStatus = GarbageCollectionModel.WEEK_STATUS_BIWEEKLY,
@@ -51,7 +51,7 @@ class DateUtilsTest {
             garbageTypes = mutableListOf(2) // 不燃
         )
         val formattedBiweekly = DateUtils.formatScheduleSummary(biweeklyModel)
-        assertEquals("第1、第3　火曜日", formattedBiweekly)
+        assertEquals("第1週・第3週 火曜日", formattedBiweekly)
     }
 
     @Test

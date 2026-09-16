@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import co.jp.kpbr.gomiman.data.local.PreferencesManager
 import co.jp.kpbr.gomiman.data.model.PushSettingModel
+import co.jp.kpbr.gomiman.data.repository.GarbageRepository
 import co.jp.kpbr.gomiman.data.repository.SyncRepository
 import co.jp.kpbr.gomiman.ui.theme.DefaultThemeColor
 import co.jp.kpbr.gomiman.ui.theme.DividerColor
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PushSettingScreen(
     preferencesManager: PreferencesManager,
+    garbageRepository: GarbageRepository,
     syncRepository: SyncRepository,
     onNavigateBack: () -> Unit
 ) {
@@ -91,6 +93,8 @@ fun PushSettingScreen(
         preferencesManager.savePushSetting(updated)
         scope.launch {
             syncRepository.syncPushSetting(updated)
+            preferencesManager.updateGarbageScheduleVersion()
+            garbageRepository.syncWithServer(syncRepository)
         }
         Toast.makeText(context, "設定を保存しました", Toast.LENGTH_SHORT).show()
         onNavigateBack()

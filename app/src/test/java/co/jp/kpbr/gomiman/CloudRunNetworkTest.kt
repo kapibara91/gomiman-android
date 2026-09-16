@@ -19,10 +19,8 @@ class CloudRunNetworkTest {
         assertEquals("X-Firebase-AppCheck", CloudRunConfig.APP_CHECK_HEADER)
         assertEquals("/healthz", CloudRunConfig.PATH_HEALTH)
         assertEquals("/api/v1/ping", CloudRunConfig.PATH_PING)
-        assertEquals("/user/sync-user/base-info", CloudRunConfig.PATH_SYNC_BASE_INFO)
-        assertEquals("/user/sync-user/push-setting", CloudRunConfig.PATH_SYNC_PUSH_SETTING)
-        assertEquals("/user/sync-user/garbage-setting", CloudRunConfig.PATH_SYNC_GARBAGE_SETTING)
-        assertEquals("/feedback/submit", CloudRunConfig.PATH_FEEDBACK_SUBMIT)
+        assertEquals("/api/v1/test", CloudRunConfig.PATH_TEST)
+        assertEquals("/api/v1/garbage/schedule", CloudRunConfig.PATH_GARBAGE_SCHEDULE)
     }
 
     @Test
@@ -78,5 +76,43 @@ class CloudRunNetworkTest {
         val pingResult = stub.testPing()
         assertTrue(pingResult.isSuccess)
         assertNotNull(pingResult.getOrNull())
+    }
+
+    @Test
+    fun testScheduleTaskPayloadSerialization() {
+        val pushSetting = PushSettingModel(
+            collectionDayBefore = true,
+            selectedTimeDayBefore = 1,
+            collectionDayAfter = false,
+            selectedTimeDayAfter = 0
+        )
+        val collection = GarbageCollectionModel(
+            id = 1L,
+            weekStatus = GarbageCollectionModel.WEEK_STATUS_EVERY_WEEK,
+            weeks = mutableListOf(),
+            garbageTypes = mutableListOf(1),
+            days = mutableListOf(1, 4),
+            version = 1726500000000L
+        )
+
+        val payload = mapOf(
+            "identifierForVendor" to "device-123",
+            "deviceUniqueId" to "device-123",
+            "userGarbageInfo" to listOf(collection.toMap()),
+            "version" to 1726500000000L,
+            "scheduleVersion" to 1726500000000L,
+            "pushSetting" to mapOf(
+                "collectionDayBefore" to pushSetting.collectionDayBefore,
+                "selectedTimeDayBefore" to pushSetting.selectedTimeDayBefore,
+                "collectionDayAfter" to pushSetting.collectionDayAfter,
+                "selectedTimeDayAfter" to pushSetting.selectedTimeDayAfter
+            )
+        )
+
+        val json = ApiClient.gson.toJson(payload)
+        assertTrue(json.contains("\"identifierForVendor\":\"device-123\""))
+        assertTrue(json.contains("\"version\":1726500000000"))
+        assertTrue(json.contains("\"userGarbageInfo\":[{\"weekStatus\":1"))
+        assertTrue(json.contains("\"pushSetting\":{"))
     }
 }

@@ -16,7 +16,12 @@ import kotlinx.coroutines.tasks.await
  */
 class FirestoreSyncRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val deviceIdProvider: () -> String? = { null }
+    private val deviceIdProvider: () -> String? = { null },
+    private val pushSettingProvider: (() -> PushSettingModel)? = null,
+    private val cloudRunSyncRepository: CloudRunSyncRepository = CloudRunSyncRepository(
+        deviceIdProvider = deviceIdProvider,
+        pushSettingProvider = pushSettingProvider
+    )
 ) : SyncRepository {
 
     companion object {
@@ -58,11 +63,25 @@ class FirestoreSyncRepository(
     }
 
     override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> {
+        // 1. Primary: sync via Cloud Run /api/v1/garbage/schedule to save and schedule Cloud Tasks
+        val cloudRunResult = cloudRunSyncRepository.syncGarbageSetting(collections, version)
+        if (cloudRunResult.isSuccess) {
+            Log.d(TAG, "Garbage setting successfully synced to Cloud Run /api/v1/garbage/schedule with version $version")
+            return cloudRunResult
+        }
+
+        Log.w(TAG, "Cloud Run /api/v1/garbage/schedule failed, falling back to direct Firestore write", cloudRunResult.exceptionOrNull())
+
+        // 2. Fallback: write directly to Firestore so user changes are persisted
+        return syncToFirestoreDirectly(collections, version)
+    }
+
+    private suspend fun syncToFirestoreDirectly(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> {
         return try {
             val docId = deviceIdProvider()?.takeIf { it.isNotBlank() }
                 ?: return Result.failure(IllegalArgumentException("Device ID cannot be empty when syncing garbage setting to Firestore."))
 
-            Log.d(TAG, "Syncing ${collections.size} garbage schedules to Firestore for docId: $docId with version: $version")
+            Log.d(TAG, "Fallback: Syncing ${collections.size} garbage schedules to Firestore for docId: $docId with version: $version")
             val data = mapOf(
                 "userGarbageInfo" to collections.map { it.toMap() },
                 "version" to version,
@@ -75,13 +94,13 @@ class FirestoreSyncRepository(
                 .set(data, SetOptions.merge())
                 .await()
 
-            Log.d(TAG, "Successfully synced garbage setting to Firestore with version $version")
+            Log.d(TAG, "Successfully synced garbage setting to Firestore directly with version $version")
             Result.success(Unit)
         } catch (e: SecurityException) {
-            Log.e(TAG, "SecurityException syncing garbage setting to Firestore (GMS broker unavailable)", e)
+            Log.e(TAG, "SecurityException syncing garbage setting to Firestore directly (GMS broker unavailable)", e)
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync garbage setting to Firestore", e)
+            Log.e(TAG, "Failed to sync garbage setting to Firestore directly", e)
             Result.failure(e)
         }
     }

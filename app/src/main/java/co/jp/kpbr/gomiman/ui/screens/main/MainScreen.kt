@@ -225,6 +225,7 @@ fun MainScreen(
                 composable(NavRoute.PushSettings.route) {
                     PushSettingScreen(
                         preferencesManager = preferencesManager,
+                        garbageRepository = garbageRepository,
                         syncRepository = syncRepository,
                         onNavigateBack = { navController.popBackStack() }
                     )

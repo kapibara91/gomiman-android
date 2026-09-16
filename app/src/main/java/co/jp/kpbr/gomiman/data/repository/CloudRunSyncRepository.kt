@@ -18,7 +18,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
  */
 class CloudRunSyncRepository(
     private val baseUrl: String = CloudRunConfig.DEFAULT_BASE_URL,
-    private val deviceIdProvider: () -> String? = { null }
+    private val deviceIdProvider: () -> String? = { null },
+    private val pushSettingProvider: (() -> PushSettingModel)? = null
 ) : SyncRepository {
 
     companion object {
@@ -30,58 +31,35 @@ class CloudRunSyncRepository(
     private val gson = ApiClient.gson
 
     override suspend fun syncBaseInfo(userInfo: UserInfoModel): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val bodyMap = mapOf(
-                "fcmToken" to userInfo.fcmToken,
-                "identifierForVendor" to (userInfo.deviceUniqueId ?: deviceIdProvider()),
-                "version" to userInfo.version,
-                "buildNumber" to userInfo.buildNumber,
-                "timeZoneOffsetInHours" to userInfo.timeZoneOffsetInHours,
-                "platform" to userInfo.platform,
-                "isPhysicalDevice" to userInfo.isPhysicalDevice,
-                "brand" to userInfo.brand,
-                "model" to userInfo.model,
-                "device" to userInfo.device,
-                "name" to userInfo.name,
-                "systemVersion" to userInfo.systemVersion
-            )
-
-            postJson(CloudRunConfig.PATH_SYNC_BASE_INFO, bodyMap)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to syncBaseInfo to Cloud Run", e)
-            Result.failure(e)
-        }
+        // User info metadata synchronization is handled directly via FirestoreSyncRepository
+        Result.success(Unit)
     }
 
     override suspend fun syncPushSetting(pushSetting: PushSettingModel): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val bodyMap = mapOf(
-                "identifierForVendor" to deviceIdProvider(),
-                "collectionDayBefore" to pushSetting.collectionDayBefore,
-                "collectionDayAfter" to pushSetting.collectionDayAfter,
-                "collectionTimeDayBefore" to pushSetting.getDayBeforeHour(),
-                "collectionTimeDayAfter" to pushSetting.getDayAfterHour()
-            )
-
-            postJson(CloudRunConfig.PATH_SYNC_PUSH_SETTING, bodyMap)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to syncPushSetting to Cloud Run", e)
-            Result.failure(e)
-        }
+        // Push settings are synchronized along with garbage schedules via PATH_GARBAGE_SCHEDULE
+        Result.success(Unit)
     }
 
     override suspend fun syncGarbageSetting(collections: List<GarbageCollectionModel>, version: Long): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val bodyMap = mapOf(
-                "identifierForVendor" to deviceIdProvider(),
+            val deviceId = deviceIdProvider()
+            val bodyMap = mutableMapOf<String, Any?>(
+                "identifierForVendor" to deviceId,
+                "deviceUniqueId" to deviceId,
                 "userGarbageInfo" to collections.map { it.toMap() },
                 "version" to version,
                 "scheduleVersion" to version
             )
+            pushSettingProvider?.invoke()?.let { setting ->
+                bodyMap["pushSetting"] = mapOf(
+                    "collectionDayBefore" to setting.collectionDayBefore,
+                    "selectedTimeDayBefore" to setting.selectedTimeDayBefore,
+                    "collectionDayAfter" to setting.collectionDayAfter,
+                    "selectedTimeDayAfter" to setting.selectedTimeDayAfter
+                )
+            }
 
-            postJson(CloudRunConfig.PATH_SYNC_GARBAGE_SETTING, bodyMap)
+            postJson(CloudRunConfig.PATH_GARBAGE_SCHEDULE, bodyMap)
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to syncGarbageSetting to Cloud Run", e)
@@ -90,18 +68,8 @@ class CloudRunSyncRepository(
     }
 
     override suspend fun submitFeedback(message: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val bodyMap = mapOf(
-                "feedbackMessage" to message,
-                "platform" to "Android"
-            )
-
-            postJson(CloudRunConfig.PATH_FEEDBACK_SUBMIT, bodyMap)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to submitFeedback to Cloud Run", e)
-            Result.failure(e)
-        }
+        // User feedback is submitted directly to Firestore 'feedback' collection via FirestoreSyncRepository
+        Result.success(Unit)
     }
 
     override suspend fun testPing(): Result<String> = withContext(Dispatchers.IO) {
