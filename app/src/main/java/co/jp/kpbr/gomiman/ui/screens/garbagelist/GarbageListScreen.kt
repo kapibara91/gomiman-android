@@ -37,8 +37,8 @@ fun GarbageListScreen(
     if (scheduleToDelete != null) {
         AlertDialog(
             onDismissRequest = { scheduleToDelete = null },
-            title = { Text("アラート", fontWeight = FontWeight.Bold) },
-            text = { Text("レコードを削除しますか") },
+            title = { Text("収集日の削除", fontWeight = FontWeight.Bold) },
+            text = { Text("この収集設定を削除しますか？") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -139,8 +139,8 @@ private fun EmptyGarbageView() {
         )
         Spacer(modifier = Modifier.height(25.dp))
         Text(
-            text = "まだ何もありません",
-            fontSize = 22.sp,
+            text = "登録されている収集日はありません",
+            fontSize = 18.sp,
             color = DefaultThemeColor,
             fontWeight = FontWeight.Normal
         )

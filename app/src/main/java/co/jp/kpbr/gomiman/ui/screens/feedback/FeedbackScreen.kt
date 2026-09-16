@@ -36,10 +36,14 @@ fun FeedbackScreen(
         if (feedbackText.isBlank() || isSubmitting) return
         isSubmitting = true
         scope.launch {
-            syncRepository.submitFeedback(feedbackText)
+            val result = syncRepository.submitFeedback(feedbackText)
             isSubmitting = false
-            Toast.makeText(context, "送信済み、ありがとうございます。", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
+            if (result.isSuccess) {
+                Toast.makeText(context, "フィードバックを送信しました。ご協力ありがとうございます。", Toast.LENGTH_SHORT).show()
+                onNavigateBack()
+            } else {
+                Toast.makeText(context, "送信に失敗しました。通信環境をご確認の上、再度お試しください。", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -73,7 +77,7 @@ fun FeedbackScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "ゴミマンにフィードバックを送信",
+                text = "ご意見・ご要望の送信",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = DefaultThemeColor
@@ -90,7 +94,7 @@ fun FeedbackScreen(
             ) {
                 if (feedbackText.isEmpty()) {
                     Text(
-                        text = "正しく機能しているかどうかをお聞かせください。",
+                        text = "アプリへのご意見・ご要望やお気づきの点をお聞かせください。",
                         color = TextSecondary,
                         fontSize = 15.sp
                     )

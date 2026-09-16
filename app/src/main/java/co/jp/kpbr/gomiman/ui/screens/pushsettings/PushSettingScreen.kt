@@ -62,7 +62,7 @@ fun PushSettingScreen(
         scope.launch {
             syncRepository.syncPushSetting(updated)
         }
-        Toast.makeText(context, "設定保存済み", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "設定を保存しました", Toast.LENGTH_SHORT).show()
         onNavigateBack()
     }
 

@@ -24,5 +24,6 @@ object CloudRunConfig {
     const val PATH_SYNC_BASE_INFO = "/user/sync-user/base-info"
     const val PATH_SYNC_PUSH_SETTING = "/user/sync-user/push-setting"
     const val PATH_SYNC_GARBAGE_SETTING = "/user/sync-user/garbage-setting"
+    // Note: User feedback is submitted directly to Firestore 'feedback' collection via FirestoreSyncRepository
     const val PATH_FEEDBACK_SUBMIT = "/feedback/submit"
 }

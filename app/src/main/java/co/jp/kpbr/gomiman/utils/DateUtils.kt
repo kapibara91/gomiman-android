@@ -71,13 +71,13 @@ object DateUtils {
         val weeksStr = if (model.weekStatus == GarbageCollectionModel.WEEK_STATUS_EVERY_WEEK) {
             "毎週"
         } else {
-            model.weeks.joinToString("、") { "第$it" }
+            model.weeks.sorted().joinToString("・") { "第${it}週" }
         }
 
-        val daysStr = model.days.mapNotNull {
+        val daysStr = model.days.sorted().mapNotNull {
             if (it in 1..7) weekdayInHanji[it] else null
-        }.joinToString("、") + "曜日"
+        }.joinToString("・") + "曜日"
 
-        return "$weeksStr　$daysStr"
+        return "$weeksStr $daysStr"
     }
 }

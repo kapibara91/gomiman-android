@@ -98,8 +98,8 @@ fun SettingsScreen(
     if (showGarbageResetDialog) {
         AlertDialog(
             onDismissRequest = { showGarbageResetDialog = false },
-            title = { Text("アラート", fontWeight = FontWeight.Bold) },
-            text = { Text("すべてのレコードが削除されます。\n続行しますか。") },
+            title = { Text("ごみ収集日のリセット", fontWeight = FontWeight.Bold) },
+            text = { Text("登録されているすべての収集日設定が削除されます。\nリセットしてもよろしいですか？") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -193,7 +193,7 @@ fun SettingsScreen(
                     }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
-                    SettingsRow(title = "ごみ収集日リセット") { showGarbageResetDialog = true }
+                    SettingsRow(title = "ごみ収集日のリセット") { showGarbageResetDialog = true }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
                     SettingsRow(title = "通知設定") { onNavigateToPushSettings() }
@@ -202,7 +202,7 @@ fun SettingsScreen(
                     SettingsRow(title = "カレンダーに登録") { onNavigateToCalendarAppend() }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
-                    SettingsRow(title = "いいね！❤️") {
+                    SettingsRow(title = "アプリを評価する") {
                         try {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=co.jp.kpbr.gomiman"))
                             context.startActivity(intent)
@@ -213,7 +213,7 @@ fun SettingsScreen(
                     }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
-                    SettingsRow(title = "フィードバック") { onNavigateToFeedback() }
+                    SettingsRow(title = "ご意見・ご要望") { onNavigateToFeedback() }
                 }
             }
 

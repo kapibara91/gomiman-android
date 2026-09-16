@@ -56,7 +56,7 @@ fun CalendarAppendScreen(
 
     fun doRegister() {
         if (garbageModels.isEmpty()) {
-            Toast.makeText(context, "登録するゴミ収集日がありません。「ゴミの日」で先に設定してください", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "登録可能な収集日がありません。「ゴミの日」で収集日を設定してください", Toast.LENGTH_LONG).show()
             return
         }
         if (isRegistering) return
@@ -91,7 +91,7 @@ fun CalendarAppendScreen(
                     is CalendarRegisterResult.NoSchedules -> {
                         Toast.makeText(
                             context,
-                            "登録するゴミ収集日がありません。「ゴミの日」で先に設定してください",
+                            "登録可能な収集日がありません。「ゴミの日」で収集日を設定してください",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -248,7 +248,7 @@ fun CalendarAppendScreen(
 
             // Period section
             Text(
-                text = "イベント期間",
+                text = "登録期間",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = DefaultThemeColor,
@@ -259,7 +259,7 @@ fun CalendarAppendScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("一週間", "一ヶ月", "二ヶ月").forEachIndexed { index, label ->
+                listOf("1週間", "1ヶ月", "2ヶ月").forEachIndexed { index, label ->
                     SelectablePill(
                         text = label,
                         selected = eventPeriod == index,

@@ -1,6 +1,8 @@
 package co.jp.kpbr.gomiman.data.repository
 
+import android.os.Build
 import android.util.Log
+import co.jp.kpbr.gomiman.BuildConfig
 import co.jp.kpbr.gomiman.data.model.GarbageCollectionModel
 import co.jp.kpbr.gomiman.data.model.PushSettingModel
 import co.jp.kpbr.gomiman.data.model.UserInfoModel
@@ -20,7 +22,8 @@ class FirestoreSyncRepository(
     companion object {
         private const val TAG = "FirestoreSyncRepo"
         const val COLLECTION_USERS = "users"
-        const val COLLECTION_FEEDBACKS = "feedbacks"
+        const val COLLECTION_FEEDBACK = "feedback"
+        const val COLLECTION_FEEDBACKS = "feedback"
     }
 
     override suspend fun syncBaseInfo(userInfo: UserInfoModel): Result<Unit> {
@@ -86,16 +89,34 @@ class FirestoreSyncRepository(
     override suspend fun submitFeedback(message: String): Result<Unit> {
         return try {
             val docId = deviceIdProvider() ?: "anonymous"
+            val appVersion = BuildConfig.VERSION_NAME
+            val buildNumber = BuildConfig.VERSION_CODE.toString()
+            val deviceModel = if (Build.MODEL.startsWith(Build.MANUFACTURER, ignoreCase = true)) {
+                Build.MODEL
+            } else {
+                "${Build.MANUFACTURER} ${Build.MODEL}"
+            }
+            val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+
             val feedbackData = mapOf(
                 "deviceUniqueId" to docId,
+                "identifierForVendor" to docId,
                 "message" to message,
+                "feedbackMessage" to message,
                 "platform" to "Android",
-                "timestamp" to FieldValue.serverTimestamp()
+                "appVersion" to appVersion,
+                "buildNumber" to buildNumber,
+                "deviceModel" to deviceModel,
+                "osVersion" to osVersion,
+                "timestamp" to FieldValue.serverTimestamp(),
+                "createdAt" to FieldValue.serverTimestamp()
             )
-            firestore.collection(COLLECTION_FEEDBACKS)
+
+            firestore.collection(COLLECTION_FEEDBACK)
                 .add(feedbackData)
                 .await()
-            Log.d(TAG, "Feedback submitted to Firestore successfully")
+
+            Log.d(TAG, "Feedback submitted to Firestore collection '$COLLECTION_FEEDBACK' successfully")
             Result.success(Unit)
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException submitting feedback to Firestore (GMS broker unavailable)", e)

@@ -50,15 +50,15 @@ fun GarbageAddScreen(
 
     fun validateAndSave() {
         if (weekStatus == GarbageCollectionModel.WEEK_STATUS_BIWEEKLY && selectedWeeks.isEmpty()) {
-            Toast.makeText(context, "週をお選びください", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "週を選択してください", Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedDays.isEmpty()) {
-            Toast.makeText(context, "曜日をお選びください", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "曜日を選択してください", Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedTypes.isEmpty()) {
-            Toast.makeText(context, "ゴミ種類をお選びください", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "ゴミの種類を選択してください", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -76,7 +76,7 @@ fun GarbageAddScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "追加",
+                        text = "収集日の追加",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = DefaultThemeColor
@@ -150,9 +150,9 @@ fun GarbageAddScreen(
                         (1..5).forEach { weekNum ->
                             val isSelected = selectedWeeks.contains(weekNum)
                             ToggleButton(
-                                text = "第 $weekNum",
+                                text = "第${weekNum}週",
                                 selected = isSelected,
-                                width = 60,
+                                width = 64,
                                 height = 30,
                                 onClick = {
                                     if (isSelected) selectedWeeks.remove(weekNum)
@@ -205,9 +205,9 @@ fun GarbageAddScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Section 2: ゴミ種類
+            // Section 2: ゴミの種類
             Text(
-                text = "ゴミ種類",
+                text = "ゴミの種類",
                 color = DefaultThemeColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,

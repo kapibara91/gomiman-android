@@ -51,12 +51,20 @@ fun MainScreen(
     if (showFirstTimeNotificationDialog) {
         AlertDialog(
             onDismissRequest = { showFirstTimeNotificationDialog = false },
-            title = null,
+            title = {
+                Text(
+                    text = "通知の設定",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DefaultThemeColor
+                )
+            },
             text = {
                 Text(
-                    text = "ゴミ捨ての通知を受け取りますか。",
-                    fontSize = 16.sp,
-                    color = DefaultThemeColor
+                    text = "ごみ収集日の通知を受け取りますか？\n（通知設定はいつでも変更できます）",
+                    fontSize = 15.sp,
+                    color = DefaultThemeColor,
+                    lineHeight = 20.sp
                 )
             },
             confirmButton = {
@@ -66,12 +74,12 @@ fun MainScreen(
                         navController.navigate(NavRoute.PushSettings.route)
                     }
                 ) {
-                    Text("OK", color = DefaultThemeColor, fontWeight = FontWeight.Bold)
+                    Text("設定する", color = DefaultThemeColor, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFirstTimeNotificationDialog = false }) {
-                    Text("キャンセル", color = TextSecondary)
+                    Text("あとで", color = TextSecondary)
                 }
             },
             containerColor = Color.White

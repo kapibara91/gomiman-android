@@ -188,7 +188,7 @@ private fun TodayGarbageRow(
             }
             if (isCollected) {
                 Text(
-                    text = "[収集済み]",
+                    text = "【収集済み】",
                     color = DefaultThemeColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -225,23 +225,23 @@ private fun EmptyScheduleView(onNavigateToAdd: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "ゴミ収集情報なし",
-            fontSize = 22.sp,
+            text = "収集日の登録がありません",
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = DefaultThemeColor
         )
         Spacer(modifier = Modifier.height(24.dp))
         Box(
             modifier = Modifier
-                .width(80.dp)
+                .width(100.dp)
                 .height(40.dp)
                 .border(1.dp, DefaultThemeColor, RoundedCornerShape(4.dp))
                 .clickable { onNavigateToAdd() },
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "追加",
-                fontSize = 18.sp,
+                text = "設定する",
+                fontSize = 16.sp,
                 color = DefaultThemeColor
             )
         }
