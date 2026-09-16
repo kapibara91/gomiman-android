@@ -1,8 +1,11 @@
 package co.jp.kpbr.gomiman.ui.screens.settings
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,22 +47,42 @@ fun SettingsScreen(
     var showEventResetDialog by remember { mutableStateOf(false) }
     var showGarbageResetDialog by remember { mutableStateOf(false) }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.all { it }
+        if (granted) {
+            showEventResetDialog = true
+        } else {
+            Toast.makeText(context, "カレンダーへのアクセス権限が必要です", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     if (showEventResetDialog) {
         AlertDialog(
             onDismissRequest = { showEventResetDialog = false },
-            title = { Text("アラート", fontWeight = FontWeight.Bold) },
-            text = { Text("イベントはすべて削除されます。\n続行しますか。") },
+            title = { Text("カレンダー予定の削除", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "端末のカレンダーから、ゴミマンが登録した収集予定をすべて削除します。\nよろしいですか？",
+                    lineHeight = 20.sp
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         scope.launch {
                             val count = calendarRepository.resetEvents()
-                            Toast.makeText(context, "イベントがリセットされました。（${count}件）", Toast.LENGTH_SHORT).show()
+                            if (count > 0) {
+                                Toast.makeText(context, "カレンダーの予定を${count}件削除しました", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "削除対象のカレンダー予定がありませんでした", Toast.LENGTH_SHORT).show()
+                            }
                             showEventResetDialog = false
                         }
                     }
                 ) {
-                    Text("リセット", color = Color.Red)
+                    Text("削除", color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -156,7 +179,18 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Column {
-                    SettingsRow(title = "イベントリセット") { showEventResetDialog = true }
+                    SettingsRow(title = "カレンダーの予定を削除") {
+                        if (calendarRepository.hasCalendarPermission()) {
+                            showEventResetDialog = true
+                        } else {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.READ_CALENDAR,
+                                    Manifest.permission.WRITE_CALENDAR
+                                )
+                            )
+                        }
+                    }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
                     SettingsRow(title = "ごみ収集日リセット") { showGarbageResetDialog = true }
@@ -165,7 +199,7 @@ fun SettingsScreen(
                     SettingsRow(title = "通知設定") { onNavigateToPushSettings() }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
-                    SettingsRow(title = "カレンダに登録") { onNavigateToCalendarAppend() }
+                    SettingsRow(title = "カレンダーに登録") { onNavigateToCalendarAppend() }
                     HorizontalDivider(color = DividerColor, thickness = 1.dp, modifier = Modifier.padding(start = 12.dp))
 
                     SettingsRow(title = "いいね！❤️") {

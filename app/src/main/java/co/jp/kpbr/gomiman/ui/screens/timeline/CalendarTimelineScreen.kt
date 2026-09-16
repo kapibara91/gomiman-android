@@ -159,7 +159,7 @@ private fun TimelineHeader(
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "カレンダに登録",
+                    text = "カレンダーに登録",
                     fontSize = 12.sp,
                     color = DefaultThemeColor
                 )

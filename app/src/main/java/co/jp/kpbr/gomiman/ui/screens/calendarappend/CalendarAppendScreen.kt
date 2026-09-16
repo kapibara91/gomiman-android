@@ -22,9 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.jp.kpbr.gomiman.data.model.GarbageCollectionModel
+import co.jp.kpbr.gomiman.data.repository.CalendarAccount
+import co.jp.kpbr.gomiman.data.repository.CalendarRegisterResult
 import co.jp.kpbr.gomiman.data.repository.CalendarRepository
 import co.jp.kpbr.gomiman.ui.theme.DefaultThemeColor
 import co.jp.kpbr.gomiman.ui.theme.DividerColor
+import co.jp.kpbr.gomiman.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,30 +41,78 @@ fun CalendarAppendScreen(
     val scope = rememberCoroutineScope()
 
     var eventPeriod by remember { mutableIntStateOf(1) } // 0: 1 week, 1: 1 month, 2: 2 months
-    var collectionDateFlag by remember { mutableIntStateOf(0) } // 0: day before, 1: day of
-    var selectedTimeDayBefore by remember { mutableIntStateOf(0) } // 0: 19:00, 1: 20:00, 2: 21:00, 3: 22:00, 4: 23:00
-    var selectedTimeDayAfter by remember { mutableIntStateOf(0) } // 0: 05:00, 1: 06:00, 2: 07:00, 3: 08:00, 4: 09:00
-    var isEventNotification by remember { mutableStateOf(true) }
+    var writableCalendars by remember { mutableStateOf<List<CalendarAccount>>(emptyList()) }
+    var selectedCalendar by remember { mutableStateOf<CalendarAccount?>(null) }
+    var showCalendarDialog by remember { mutableStateOf(false) }
+    var isRegistering by remember { mutableStateOf(false) }
 
-    val timesBefore = listOf("19:00", "20:00", "21:00", "22:00", "23:00")
-    val timesAfter = listOf("05:00", "06:00", "07:00", "08:00", "09:00")
+    LaunchedEffect(Unit) {
+        if (calendarRepository.hasCalendarPermission()) {
+            val cals = calendarRepository.getWritableCalendars()
+            writableCalendars = cals
+            selectedCalendar = calendarRepository.getDefaultCalendar()
+        }
+    }
 
     fun doRegister() {
+        if (garbageModels.isEmpty()) {
+            Toast.makeText(context, "登録するゴミ収集日がありません。「ゴミの日」で先に設定してください", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (isRegistering) return
+        isRegistering = true
+
         scope.launch {
-            val hour = if (collectionDateFlag == 0) {
-                19 + selectedTimeDayBefore
-            } else {
-                5 + selectedTimeDayAfter
+            try {
+                val targetCalId = selectedCalendar?.id ?: calendarRepository.getDefaultCalendar()?.id
+                when (val result = calendarRepository.registerEvents(
+                    models = garbageModels,
+                    periodMonths = eventPeriod,
+                    targetCalendarId = targetCalId
+                )) {
+                    is CalendarRegisterResult.Success -> {
+                        if (result.count > 0) {
+                            val accountName = selectedCalendar?.accountName ?: ""
+                            val accountMsg = if (accountName.isNotEmpty()) "（$accountName）" else ""
+                            Toast.makeText(
+                                context,
+                                "${result.count}件の予定をカレンダーに登録しました$accountMsg",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            onNavigateBack()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "選択した期間内に該当するゴミ収集日がありませんでした",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                    is CalendarRegisterResult.NoSchedules -> {
+                        Toast.makeText(
+                            context,
+                            "登録するゴミ収集日がありません。「ゴミの日」で先に設定してください",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is CalendarRegisterResult.NoCalendarFound -> {
+                        Toast.makeText(
+                            context,
+                            "端末に書き込み可能なカレンダーが見つかりませんでした",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is CalendarRegisterResult.PermissionDenied -> {
+                        Toast.makeText(
+                            context,
+                            "カレンダーへのアクセス権限が必要です",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } finally {
+                isRegistering = false
             }
-            val count = calendarRepository.registerEvents(
-                models = garbageModels,
-                periodMonths = eventPeriod,
-                collectionDateFlag = collectionDateFlag,
-                selectedHour = hour,
-                hasNotification = isEventNotification
-            )
-            Toast.makeText(context, "${count}件の予定をカレンダーに登録しました", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
         }
     }
 
@@ -70,10 +121,82 @@ fun CalendarAppendScreen(
     ) { permissions ->
         val granted = permissions.values.all { it }
         if (granted) {
+            val cals = calendarRepository.getWritableCalendars()
+            writableCalendars = cals
+            selectedCalendar = calendarRepository.getDefaultCalendar()
             doRegister()
         } else {
             Toast.makeText(context, "カレンダーへのアクセス権限が必要です", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    if (showCalendarDialog && writableCalendars.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showCalendarDialog = false },
+            title = {
+                Text(
+                    text = "登録先カレンダーの選択",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = DefaultThemeColor
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    writableCalendars.forEach { cal ->
+                        val isSelected = cal.id == selectedCalendar?.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedCalendar = cal
+                                    showCalendarDialog = false
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedCalendar = cal
+                                    showCalendarDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = DefaultThemeColor
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = if (cal.displayName.isNotEmpty()) cal.displayName else cal.accountName,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF2C3E50)
+                                )
+                                Text(
+                                    text = "${cal.accountName} (${if (cal.accountType == "com.google") "Google" else cal.accountType})",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCalendarDialog = false }) {
+                    Text("キャンセル", color = DefaultThemeColor)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(12.dp)
+        )
     }
 
     Scaffold(
@@ -104,6 +227,25 @@ fun CalendarAppendScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            // Informative banner explaining destination
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = DefaultThemeColor.copy(alpha = 0.08f)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "※ 端末のカレンダーアプリ（Googleカレンダー等）に、設定したゴミ収集日（終日予定）を登録します。",
+                    fontSize = 13.sp,
+                    color = DefaultThemeColor,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                )
+            }
+
             // Period section
             Text(
                 text = "イベント期間",
@@ -129,98 +271,110 @@ fun CalendarAppendScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Time section
+            // Confirmation / details section
             Text(
-                text = "イベント時間",
+                text = "登録内容の確認",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = DefaultThemeColor,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            Row(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FBF9)),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, DividerColor)
             ) {
-                SelectablePill(
-                    text = "収集日の前日",
-                    selected = collectionDateFlag == 0,
-                    modifier = Modifier.weight(1f),
-                    onClick = { collectionDateFlag = 0 }
-                )
-                SelectablePill(
-                    text = "収集日の当日",
-                    selected = collectionDateFlag == 1,
-                    modifier = Modifier.weight(1f),
-                    onClick = { collectionDateFlag = 1 }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Hour buttons
-            val hours = if (collectionDateFlag == 0) timesBefore else timesAfter
-            val selectedHourIndex = if (collectionDateFlag == 0) selectedTimeDayBefore else selectedTimeDayAfter
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                hours.forEachIndexed { index, timeText ->
-                    Box(
-                        modifier = Modifier
-                            .width(62.dp)
-                            .height(34.dp)
-                            .border(
-                                border = if (selectedHourIndex == index) BorderStroke(0.dp, Color.Transparent) else BorderStroke(1.dp, DefaultThemeColor),
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .background(
-                                color = if (selectedHourIndex == index) DefaultThemeColor else Color.White,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .clickable {
-                                if (collectionDateFlag == 0) selectedTimeDayBefore = index
-                                else selectedTimeDayAfter = index
-                            },
-                        contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(text = "登録対象日", fontSize = 14.sp, color = TextSecondary)
                         Text(
-                            text = timeText,
-                            color = if (selectedHourIndex == index) Color.White else DefaultThemeColor,
-                            fontSize = 13.sp
+                            text = "収集日の当日（終日予定）",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF2C3E50)
                         )
+                    }
+                    HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "登録期間", fontSize = 14.sp, color = TextSecondary)
+                        val periodText = when (eventPeriod) {
+                            0 -> "今日から 1週間"
+                            1 -> "今日から 1ヶ月"
+                            2 -> "今日から 2ヶ月"
+                            else -> "今日から 1ヶ月"
+                        }
+                        Text(
+                            text = periodText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF2C3E50)
+                        )
+                    }
+                    HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = writableCalendars.size > 1) {
+                                showCalendarDialog = true
+                            }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f, fill = false)) {
+                            Text(text = "登録先カレンダー", fontSize = 14.sp, color = TextSecondary)
+                            if (writableCalendars.size > 1) {
+                                Text(
+                                    text = "タップして変更",
+                                    fontSize = 11.sp,
+                                    color = DefaultThemeColor
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val calName = selectedCalendar?.let { cal ->
+                                if (cal.displayName.isNotEmpty() && cal.displayName != cal.accountName) {
+                                    "${cal.displayName} (${cal.accountName})"
+                                } else {
+                                    cal.accountName.ifEmpty { cal.displayName.ifEmpty { "標準カレンダー" } }
+                                }
+                            } ?: "端末の標準カレンダー"
+
+                            Text(
+                                text = calName,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF2C3E50),
+                                maxLines = 1
+                            )
+                            if (writableCalendars.size > 1) {
+                                Text(text = "▼", fontSize = 10.sp, color = TextSecondary)
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Notification switch
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "通知を受け取る",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DefaultThemeColor
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Switch(
-                    checked = isEventNotification,
-                    onCheckedChange = { isEventNotification = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = DefaultThemeColor,
-                        uncheckedThumbColor = DefaultThemeColor,
-                        uncheckedTrackColor = DividerColor
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
             // Action button
             Button(
@@ -236,18 +390,37 @@ fun CalendarAppendScreen(
                         )
                     }
                 },
+                enabled = !isRegistering,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
                 shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DefaultThemeColor)
-            ) {
-                Text(
-                    text = "カレンダーに登録",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DefaultThemeColor,
+                    disabledContainerColor = DefaultThemeColor.copy(alpha = 0.5f)
                 )
+            ) {
+                if (isRegistering) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "登録中...",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = "カレンダーに登録",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
