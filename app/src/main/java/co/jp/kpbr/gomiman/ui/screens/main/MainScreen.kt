@@ -203,12 +203,13 @@ fun MainScreen(
                         onSaveSuccess = { newModel ->
                             scope.launch {
                                 garbageRepository.insertGarbageCollection(newModel)
-                                garbageRepository.syncWithServer(syncRepository)
                                 if (preferencesManager.isFirstTimeAddedGarbage()) {
                                     preferencesManager.markFirstTimeAddedGarbage()
                                     showFirstTimeNotificationDialog = true
                                 }
                                 navController.popBackStack()
+                                // Perform network synchronization in background without blocking screen transition
+                                garbageRepository.syncWithServer(syncRepository)
                             }
                         }
                     )

@@ -36,6 +36,8 @@ fun GarbageAddScreen(
     val selectedDays = remember { mutableStateListOf<Int>() }
     val selectedTypes = remember { mutableStateListOf<Int>() }
 
+    var isSaving by remember { mutableStateOf(false) }
+
     val daysMeta = remember {
         listOf(
             1 to ("月" to "Mon"),
@@ -49,6 +51,7 @@ fun GarbageAddScreen(
     }
 
     fun validateAndSave() {
+        if (isSaving) return
         if (weekStatus == GarbageCollectionModel.WEEK_STATUS_BIWEEKLY && selectedWeeks.isEmpty()) {
             Toast.makeText(context, "週を選択してください", Toast.LENGTH_SHORT).show()
             return
@@ -62,6 +65,7 @@ fun GarbageAddScreen(
             return
         }
 
+        isSaving = true
         val model = GarbageCollectionModel(
             weekStatus = weekStatus,
             weeks = selectedWeeks.toMutableList(),
@@ -83,22 +87,36 @@ fun GarbageAddScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onNavigateBack) {
+                    TextButton(
+                        onClick = onNavigateBack,
+                        enabled = !isSaving
+                    ) {
                         Text(
                             text = "キャンセル",
-                            color = DefaultThemeColor,
+                            color = if (isSaving) DefaultThemeColor.copy(alpha = 0.5f) else DefaultThemeColor,
                             fontSize = 15.sp
                         )
                     }
                 },
                 actions = {
-                    TextButton(onClick = { validateAndSave() }) {
-                        Text(
-                            text = "保存",
-                            color = DefaultThemeColor,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    TextButton(
+                        onClick = { validateAndSave() },
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = DefaultThemeColor
+                            )
+                        } else {
+                            Text(
+                                text = "保存",
+                                color = DefaultThemeColor,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)

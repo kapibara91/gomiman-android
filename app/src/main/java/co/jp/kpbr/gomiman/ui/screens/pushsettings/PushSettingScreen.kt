@@ -80,10 +80,14 @@ fun PushSettingScreen(
     var collectionDayAfter by remember { mutableStateOf(initialSetting.collectionDayAfter) }
     var selectedTimeDayAfter by remember { mutableIntStateOf(initialSetting.selectedTimeDayAfter) }
 
+    var isSaving by remember { mutableStateOf(false) }
+
     val timesBefore = listOf("19:00", "20:00", "21:00", "22:00", "23:00")
     val timesAfter = listOf("05:00", "06:00", "07:00", "08:00", "09:00")
 
     fun saveAndExit() {
+        if (isSaving) return
+        isSaving = true
         val updated = PushSettingModel(
             collectionDayBefore = collectionDayBefore,
             selectedTimeDayBefore = selectedTimeDayBefore,
@@ -112,13 +116,36 @@ fun PushSettingScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = { onNavigateBack() }) {
-                        Text(text = "戻る", color = DefaultThemeColor, fontSize = 15.sp)
+                    TextButton(
+                        onClick = { onNavigateBack() },
+                        enabled = !isSaving
+                    ) {
+                        Text(
+                            text = "戻る",
+                            color = if (isSaving) DefaultThemeColor.copy(alpha = 0.5f) else DefaultThemeColor,
+                            fontSize = 15.sp
+                        )
                     }
                 },
                 actions = {
-                    TextButton(onClick = { saveAndExit() }) {
-                        Text(text = "保存", color = DefaultThemeColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = { saveAndExit() },
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = DefaultThemeColor
+                            )
+                        } else {
+                            Text(
+                                text = "保存",
+                                color = DefaultThemeColor,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)

@@ -26,6 +26,9 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 
 object AdConstants {
+    // 暂时关闭广告（用于商店截图等场景），截图完成后改回 true 即可恢复
+    const val SHOW_ADS = false
+
     // Official Google AdMob Test Banner Unit ID
     const val TEST_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
 
@@ -53,6 +56,10 @@ fun BannerAdView(
     adUnitId: String,
     modifier: Modifier = Modifier
 ) {
+    if (!AdConstants.SHOW_ADS) {
+        return
+    }
+
     val context = LocalContext.current
     val adView = remember(adUnitId) {
         AdView(context).apply {

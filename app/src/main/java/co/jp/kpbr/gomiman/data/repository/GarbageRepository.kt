@@ -47,6 +47,18 @@ class GarbageRepository(
 
     suspend fun insertGarbageCollection(model: GarbageCollectionModel): Long = withContext(ioDispatcher) {
         val currentList = _garbageModels.value.toMutableList()
+
+        // Deduplication safety check: if an identical item already exists, do not re-insert
+        val existingItem = currentList.firstOrNull {
+            it.weekStatus == model.weekStatus &&
+            it.weeks == model.weeks &&
+            it.days == model.days &&
+            it.garbageTypes == model.garbageTypes
+        }
+        if (existingItem != null) {
+            return@withContext existingItem.id ?: 0L
+        }
+
         val newId = (currentList.maxOfOrNull { it.id ?: 0L } ?: 0L) + 1L
         val newVersion = preferencesManager.updateGarbageScheduleVersion()
 

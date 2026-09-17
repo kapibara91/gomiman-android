@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import co.jp.kpbr.gomiman.BuildConfig
 import co.jp.kpbr.gomiman.R
 import co.jp.kpbr.gomiman.data.repository.CalendarRepository
 import co.jp.kpbr.gomiman.ui.theme.DefaultThemeColor
@@ -44,6 +45,20 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val versionName = remember(context) {
+        try {
+            val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
+            packageInfo.versionName ?: BuildConfig.VERSION_NAME
+        } catch (_: Exception) {
+            BuildConfig.VERSION_NAME
+        }
+    }
+
     var showEventResetDialog by remember { mutableStateOf(false) }
     var showGarbageResetDialog by remember { mutableStateOf(false) }
 
@@ -58,9 +73,14 @@ fun SettingsScreen(
         }
     }
 
+    var isResettingEvents by remember { mutableStateOf(false) }
+    var isResettingGarbage by remember { mutableStateOf(false) }
+
     if (showEventResetDialog) {
         AlertDialog(
-            onDismissRequest = { showEventResetDialog = false },
+            onDismissRequest = {
+                if (!isResettingEvents) showEventResetDialog = false
+            },
             title = { Text("カレンダー予定の削除", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
@@ -71,22 +91,40 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        if (isResettingEvents) return@TextButton
+                        isResettingEvents = true
                         scope.launch {
-                            val count = calendarRepository.resetEvents()
-                            if (count > 0) {
-                                Toast.makeText(context, "カレンダーの予定を${count}件削除しました", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "削除対象のカレンダー予定がありませんでした", Toast.LENGTH_SHORT).show()
+                            try {
+                                val count = calendarRepository.resetEvents()
+                                if (count > 0) {
+                                    Toast.makeText(context, "カレンダーの予定を${count}件削除しました", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "削除対象のカレンダー予定がありませんでした", Toast.LENGTH_SHORT).show()
+                                }
+                            } finally {
+                                isResettingEvents = false
+                                showEventResetDialog = false
                             }
-                            showEventResetDialog = false
                         }
-                    }
+                    },
+                    enabled = !isResettingEvents
                 ) {
-                    Text("削除", color = Color.Red, fontWeight = FontWeight.Bold)
+                    if (isResettingEvents) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.Red
+                        )
+                    } else {
+                        Text("削除", color = Color.Red, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEventResetDialog = false }) {
+                TextButton(
+                    onClick = { showEventResetDialog = false },
+                    enabled = !isResettingEvents
+                ) {
                     Text("キャンセル", color = DefaultThemeColor)
                 }
             },
@@ -97,22 +135,31 @@ fun SettingsScreen(
 
     if (showGarbageResetDialog) {
         AlertDialog(
-            onDismissRequest = { showGarbageResetDialog = false },
+            onDismissRequest = {
+                if (!isResettingGarbage) showGarbageResetDialog = false
+            },
             title = { Text("ごみ収集日のリセット", fontWeight = FontWeight.Bold) },
             text = { Text("登録されているすべての収集日設定が削除されます。\nリセットしてもよろしいですか？") },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        if (isResettingGarbage) return@TextButton
+                        isResettingGarbage = true
                         onResetGarbageCollections()
                         Toast.makeText(context, "ごみ収集日をリセットしました", Toast.LENGTH_SHORT).show()
                         showGarbageResetDialog = false
-                    }
+                        isResettingGarbage = false
+                    },
+                    enabled = !isResettingGarbage
                 ) {
                     Text("リセット", color = Color.Red)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showGarbageResetDialog = false }) {
+                TextButton(
+                    onClick = { showGarbageResetDialog = false },
+                    enabled = !isResettingGarbage
+                ) {
                     Text("キャンセル", color = DefaultThemeColor)
                 }
             },
@@ -162,7 +209,7 @@ fun SettingsScreen(
             )
 
             Text(
-                text = "Ver 1.4.3",
+                text = "Ver $versionName",
                 fontSize = 14.sp,
                 color = TextSecondary
             )

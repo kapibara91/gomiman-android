@@ -33,27 +33,37 @@ fun GarbageListScreen(
     onDeleteSchedule: (Long) -> Unit
 ) {
     var scheduleToDelete by remember { mutableStateOf<GarbageCollectionModel?>(null) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     if (scheduleToDelete != null) {
         AlertDialog(
-            onDismissRequest = { scheduleToDelete = null },
+            onDismissRequest = {
+                if (!isDeleting) scheduleToDelete = null
+            },
             title = { Text("収集日の削除", fontWeight = FontWeight.Bold) },
             text = { Text("この収集設定を削除しますか？") },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        if (isDeleting) return@TextButton
+                        isDeleting = true
                         val id = scheduleToDelete?.id
+                        scheduleToDelete = null
                         if (id != null) {
                             onDeleteSchedule(id)
                         }
-                        scheduleToDelete = null
-                    }
+                        isDeleting = false
+                    },
+                    enabled = !isDeleting
                 ) {
                     Text("削除する", color = Color.Red)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { scheduleToDelete = null }) {
+                TextButton(
+                    onClick = { scheduleToDelete = null },
+                    enabled = !isDeleting
+                ) {
                     Text("キャンセル", color = DefaultThemeColor)
                 }
             },
